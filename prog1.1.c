@@ -38,17 +38,17 @@ int read_from_pipe() {
 
 #define MQ_PATH "messagequeue"
 
-int create_msgqueue() {
+int msgid;
+
+void create_msgqueue() {
     key_t key = ftok(MQ_PATH, 65);
-    int msgid;
     if ((msgid = msgget(key, 0666 | IPC_CREAT)) == -1) {
         perror("msgget");
         exit(1);
     }
-    return msgid;
 }
 
-void send_to_msgqueue(int msgid, int value) {
+void send_to_msgqueue(int value) {
     msgbuffer message;
     message.mtype = 1;
     sprintf(message.mtext, "%d", value);
@@ -59,7 +59,7 @@ void send_to_msgqueue(int msgid, int value) {
     // printf("Message sent\n");
 }
 
-int receive_msg(int msgid) {
+int receive_msg() {
     msgbuffer message;
     if (msgrcv(msgid, &message, sizeof(message), 1, 0) == -1) {
         perror("msgrcv");
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
     }
 
     int value;
-    int msgid = create_msgqueue();
+    create_msgqueue();
     
     int child_pid = -1, parent_pid = -1;
     switch (fork()) {
@@ -100,8 +100,9 @@ int main(int argc, char** argv) {
             if (val == 0) break;
         } else if (pid == child_pid) {
             value = read_from_pipe();
-            send_to_msgqueue(msgid, value);
-            int result = receive_msg(msgid);
+            send_to_msgqueue(value);
+            if (value == 0) break;
+            int result = receive_msg();
             printf("%d\n", result);
         } else {
             printf("Something wrong happened.\n");

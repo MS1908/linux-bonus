@@ -16,6 +16,7 @@ typedef struct msgbuffer_t {
 
 int msgid, shmid;
 int msgq_value, shm_value;
+int *data;
 
 void create_shmem() {
     key_t key = ftok(SHM_PATH, 65);
@@ -70,7 +71,6 @@ void access_shmem_and_stuff() {
         exit(1);
     }
 
-    int *data;
     if ((data = (int *) shmat(shmid, (void *) 0, 0)) == (int *) -1) {
         perror("shamt");
         exit(1);
@@ -99,7 +99,16 @@ int main() {
         if (value == 0) break;
         // printf("Value = %d\n", value);
         access_shmem_and_stuff();
-
     }
+
     msgctl(msgid, IPC_RMID, NULL);
+
+    if (shmdt((void *) data) == -1) {
+        perror("shmdt");
+        exit(1);
+    }
+    if (shmctl(shmid, IPC_RMID, 0) == -1) {
+        perror("shmctl");
+        exit(1);
+    }
 }
